@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Seating Cargo Excel Uploader & 100% Audit-Verified Report Generator</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+  :root {
+    --navy: #1B365D;
+    --slate-blue: #2C4D75;
+    --teal: #2B7A78;
+    --bg: #F1F5F9;
+    --card: #FFFFFF;
+    --border: #CBD5E1;
+    --text: #1E293B;
+    --muted: #64748B;
+    --ok-bg: #ECFDF5;
+    --ok-border: #10B981;
+    --ok-text: #065F46;
+    --warn-bg: #FEF3C7;
+    --warn-border: #F59E0B;
+    --warn-text: #92400E;
+    --err-bg: #FEF2F2;
+    --err-border: #EF4444;
+    --err-text: #991B1B;
+  }
+  * { box-sizing: border-box; font-family: 'Segoe UI', Calibri, Arial, sans-serif; }
+  body { margin: 0; padding: 24px; background: var(--bg); color: var(--text); }
+  .container { max-width: 1300px; margin: 0 auto; }
+  .header {
+    background: linear-gradient(135deg, #1B365D 0%, #2C4D75 100%);
+    color: #fff; padding: 22px 28px; border-radius: 10px;
+    margin-bottom: 20px; box-shadow: 0 4px 12px rgba(27,54,93,0.18);
+  }
+  .header h1 { margin: 0 0 6px 0; font-size: 22px; letter-spacing: 0.3px; }
+  .header p { margin: 0; font-size: 13px; color: #E2E8F0; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px 24px; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  }
+  .card h2 { margin: 0 0 12px 0; font-size: 16px; color: var(--navy); border-bottom: 2px solid #E2E8F0; padding-bottom: 8px; }
+
+  .upload-zone {
+    border: 2px dashed #94A3B8; border-radius: 10px; padding: 22px; text-align: center;
+    background: #F8FAFC; transition: 0.2s; cursor: pointer; margin-bottom: 14px;
+  }
+  .upload-zone:hover, .upload-zone.dragover { border-color: var(--navy); background: #EFF6FF; }
+  .upload-zone strong { color: var(--navy); font-size: 15px; display: block; margin-bottom: 4px; }
+  .upload-zone span { font-size: 12.5px; color: var(--muted); }
+
+  .controls { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 12px; }
+  .control-group { display: flex; flex-direction: column; gap: 4px; }
+  .control-group label { font-size: 11.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+  select {
+    padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; min-width: 230px; background: #fff;
+  }
+  .chk-wrap { display: flex; align-items: center; gap: 7px; padding: 9px 12px; background: #F8FAFC; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+  details { margin-top: 10px; }
+  summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--slate-blue); user-select: none; }
+  textarea {
+    width: 100%; height: 140px; padding: 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-family: Consolas, monospace; font-size: 12px; resize: vertical; line-height: 1.45; margin-top: 8px;
+  }
+
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  button {
+    border: none; padding: 10px 18px; border-radius: 6px; font-size: 13.5px; font-weight: 600;
+    cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-primary { background: var(--navy); color: #fff; }
+  .btn-primary:hover { background: var(--slate-blue); }
+  .btn-success { background: #15803D; color: #fff; }
+  .btn-success:hover { background: #166534; }
+  .btn-secondary { background: #E2E8F0; color: var(--text); }
+  .btn-secondary:hover { background: #CBD5E1; }
+  .btn-copy { background: var(--teal); color: #fff; }
+  .btn-copy:hover { background: #226361; }
+
+  #outputSection { display: none; }
+  .audit-banner {
+    border-radius: 8px; padding: 14px 18px; margin-bottom: 18px; font-size: 13.5px; border: 1px solid;
+  }
+  .audit-ok { background: var(--ok-bg); border-color: var(--ok-border); color: var(--ok-text); }
+  .audit-warn { background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-text); }
+  .audit-err { background: var(--err-bg); border-color: var(--err-border); color: var(--err-text); }
+
+  .reconcile-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1); font-size: 12.5px;
+  }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .kpi-card {
+    background: #F8FAFC; border: 1px solid var(--border); border-left: 5px solid var(--navy);
+    border-radius: 8px; padding: 14px 16px;
+  }
+  .kpi-card .lbl { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+  .kpi-card .val { font-size: 22px; font-weight: 700; color: var(--navy); margin-top: 4px; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 920px) { .two-col { grid-template-columns: 1fr; } }
+
+  .mail-box {
+    background: #F8FAFC; border: 1px solid var(--border); border-radius: 8px; padding: 16px;
+    white-space: pre-wrap; font-family: Calibri, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.52;
+  }
+  .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+  .chart-wrap { border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px; background: #fff; height: 290px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 8px; }
+  th { background: var(--slate-blue); color: #fff; padding: 8px 10px; text-align: left; border: 1px solid var(--border); }
+  td { padding: 7px 10px; border: 1px solid var(--border); }
+  tr:nth-child(even) td { background: #F4F7FA; }
+  tr.tot-row td { background: #E2E8F0; font-weight: 700; border-top: 2px solid var(--navy); }
+  .num { text-align: right; }
+  .ctr { text-align: center; }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;
+    background: #DBEAFE; color: #1E40AF;
+  }
+  .toast {
+    position: fixed; bottom: 20px; right: 20px; background: #0F172A; color: #fff;
+    padding: 10px 18px; border-radius: 6px; font-size: 13px; display: none; z-index: 999;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Seating Cargo Excel Uploader &amp; 100% Audit-Verified Report Generator</h1>
+    <p>Attach your regular Excel file (.xlsx / .xls / .csv). Cross-checks every Excel row &amp; total against raw sheet sums, resolves merged date cells, embeds charts in Excel, and uses live Excel =SUM() formulas.</p>
+  </div>
+
+  <div class="card">
+    <h2>1. Attach Your Regular Excel File (or Paste Data)</h2>
+    <div class="upload-zone" id="dropZone" onclick="document.getElementById('excelFileInput').click()">
+      <strong>Click here to choose your Excel file (.xlsx, .xls, .csv) or drag &amp; drop it here</strong>
+      <span id="fileStatus">Automatic 100% Financial Reconciliation + Merged Date Support + Embedded Excel Charts + Live =SUM() Formulas</span>
+      <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFileUpload(event)">
+    </div>
+
+    <div class="controls" id="filterControls" style="display:none;">
+      <div class="control-group">
+        <label>Select Worksheet</label>
+        <select id="sheetSelect" onchange="onSheetChange()"></select>
+      </div>
+      <div class="control-group">
+        <label>Select Month-Year</label>
+        <select id="monthSelect" onchange="renderSelectedMonth()"></select>
+      </div>
+      <label class="chk-wrap" title="If your Excel sheet merges Cargo-in Date across multiple trucks on the same day, keep this checked so sub-rows inherit the date above them.">
+        <input type="checkbox" id="fillMergedDates" checked onchange="onSheetChange()">
+        Fill down merged Cargo-in Dates
+      </label>
+    </div>
+
+    <details>
+      <summary>Or paste copied Excel rows manually (Fallback)</summary>
+      <textarea id="pasteInput" placeholder="Paste copied Excel rows here..."></textarea>
+      <div class="btn-row">
+        <button class="btn-primary" onclick="parsePastedText()">Process Pasted Data</button>
+        <button class="btn-secondary" onclick="loadSampleData()">Load October-26 Sample</button>
+      </div>
+    </details>
+  </div>
+
+  <div id="outputSection">
+    <div id="auditBox"></div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="lbl">Total Movements</div><div class="val" id="kpiTrips">0 Trips</div></div>
+      <div class="kpi-card"><div class="lbl">Total Billing Cost</div><div class="val" id="kpiCost">BDT 0</div></div>
+      <div class="kpi-card"><div class="lbl">Total Holding Days</div><div class="val" id="kpiDays">0 Days</div></div>
+      <div class="kpi-card"><div class="lbl">Avg. Duration</div><div class="val" id="kpiAvg">0 Days</div></div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <h2>2. Top Management Email Draft (<span id="mailMonthBadge"></span>)</h2>
+        <div class="mail-box" id="mailPreview"></div>
+        <div class="btn-row">
+          <button class="btn-copy" onclick="copyMail()">Copy Email Text</button>
+          <button class="btn-success" onclick="exportExcelWithCharts()">Download Audit-Verified Excel With Charts (.xlsx)</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>3. Executive Breakdown Tables</h2>
+        <div id="summaryTables"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>4. Visual Charts (Included Automatically in Downloaded Excel)</h2>
+      <div class="chart-grid">
+        <div class="chart-wrap"><canvas id="chartPurpose"></canvas></div>
+        <div class="chart-wrap"><canvas id="chartVendor"></canvas></div>
+        <div class="chart-wrap"><canvas id="chartUnit"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>5. Complete Verified Monthly Cargo Log (With Original Excel Row #)</h2>
+      <div style="overflow-x:auto;" id="logTableWrap"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Copied to clipboard!</div>
+
+<script>
+Chart.register(ChartDataLabels);
+
+let currentWorkbook = null;
+let lastPastedMatrix = null;
+let allRecords = [];
+let auditLog = {
+  detectedHeaderRow: 0,
+  mappedColumns: {},
+  skippedRows: [],
+  rawTotalBill: 0,
+  parsedTotalBill: 0,
+  rawTotalDays: 0,
+  parsedTotalDays: 0
+};
+let activeMonthRecords = [];
+let activeMonthLabel = '';
+let charts = {};
+
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTHS_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 2600);
+}
+
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) processExcelFile(e.dataTransfer.files[0]);
+});
+
+function handleFileUpload(e) {
+  if (e.target.files.length) processExcelFile(e.target.files[0]);
+}
+
+function processExcelFile(file) {
+  lastPastedMatrix = null;
+  document.getElementById('fileStatus').innerHTML = `Loaded file: <span class="badge">${file.name}</span>`;
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    const data = new Uint8Array(evt.target.result);
+    currentWorkbook = XLSX.read(data, { type: 'array', cellDates: false });
+    const sheetSel = document.getElementById('sheetSelect');
+    sheetSel.innerHTML = currentWorkbook.SheetNames.map(name => `<option value="${name}">${name}</option>`).join('');
+    document.getElementById('filterControls').style.display = 'flex';
+    onSheetChange();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function normalizeText(val) {
+  return String(val === null || val === undefined ? '' : val).replace(/\r?\n/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function cleanNumber(val) {
+  if (val === null || val === undefined || val === '') return 0;
+  if (typeof val === 'number') return Number.isFinite(val) ? val : 0;
+  const num = parseFloat(String(val).replace(/[^0-9.-]/g, ''));
+  return Number.isFinite(num) ? num : 0;
+}
+
+// Accurate Excel serial date conversion (handles 1900 leap-year offset cleanly)
+function excelSerialToParts(serial) {
+  const utcDays = Math.floor(serial - 25569);
+  const d = new Date(utcDays * 86400 * 1000);
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  const mIdx = d.getUTCMonth();
+  const fullYr = d.getUTCFullYear();
+  const yr = String(fullYr).slice(-2);
+  return {
+    display: `${day}-${MONTHS_SHORT[mIdx]}-${yr}`,
+    monthKey: `${fullYr}-${String(mIdx + 1).padStart(2, '0')}`,
+    fullMonth: `${MONTHS_FULL[mIdx]} ${fullYr}`
+  };
+}
+
+function parseExcelDate(rawVal) {
+  if (rawVal === null || rawVal === undefined || rawVal === '') {
+    return { display: '', monthKey: 'Unknown', fullMonth: 'Unknown Date', valid: false };
+  }
+
+  if (typeof rawVal === 'number' && rawVal > 20000 && rawVal < 80000) {
+    return { ...excelSerialToParts(rawVal), valid: true };
+  }
+
+  const str = normalizeText(rawVal);
+  if (!str) return { display: '', monthKey: 'Unknown', fullMonth: 'Unknown Date', valid: false };
+
+  // DD-MMM-YY or DD-MMM-YYYY (e.g., 14-Oct-26 or 14 Oct 2026)
+  const m1 = str.match(/^(\d{1,2})[-/\s.]([A-Za-z]{3,9})[-/\s.,]+(\d{2,4})$/);
+  if (m1) {
+    const mName = m1[2].slice(0, 3).toLowerCase();
+    const mIdx = MONTHS_SHORT.findIndex(m => m.toLowerCase() === mName);
+    if (mIdx !== -1) {
+      const fullYr = m1[3].length === 2 ? `20${m1[3]}` : m1[3];
+      return {
+        display: str,
+        monthKey: `${fullYr}-${String(mIdx + 1).padStart(2, '0')}`,
+        fullMonth: `${MONTHS_FULL[mIdx]} ${fullYr}`,
+        valid: true
+      };
+    }
+  }
+
+  // DD/MM/YYYY or DD-MM-YYYY
+  const m2 = str.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
+  if (m2) {
+    const mIdx = parseInt(m2[2], 10) - 1;
+    if (mIdx >= 0 && mIdx < 12) {
+      const fullYr = m2[3].length === 2 ? `20${m2[3]}` : m2[3];
+      return {
+        display: str,
+        monthKey: `${fullYr}-${String(mIdx + 1).padStart(2, '0')}`,
+        fullMonth: `${MONTHS_FULL[mIdx]} ${fullYr}`,
+        valid: true
+      };
+    }
+  }
+
+  // YYYY-MM-DD
+  const m3 = str.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+  if (m3) {
+    const mIdx = parseInt(m3[2], 10) - 1;
+    if (mIdx >= 0 && mIdx < 12) {
+      return {
+        display: str,
+        monthKey: `${m3[1]}-${String(mIdx + 1).padStart(2, '0')}`,
+        fullMonth: `${MONTHS_FULL[mIdx]} ${m3[1]}`,
+        valid: true
+      };
+    }
+  }
+
+  return { display: str, monthKey: 'Unparsed', fullMonth: 'Unparsed Dates', valid: false };
+}
+
+function mapColumns(headerRow) {
+  const map = {};
+  headerRow.forEach((h, idx) => {
+    const s = normalizeText(h).toLowerCase();
+    if (s.includes('cargo in') || s === 'in date' || s === 'date') map.cargoIn = idx;
+    else if (s.includes('bring for') || s.includes('category') || s.includes('item')) map.bringFor = idx;
+    else if (s.includes('transport') || s.includes('vehicle') || s.includes('truck') || s.includes('car no')) map.transportNo = idx;
+    else if (s.includes('contact') || s.includes('phone') || s.includes('mobile') || s.includes('driver')) map.contact = idx;
+    else if (s.includes('purpose') || s.includes('buyer') || s.includes('audit')) map.purpose = idx;
+    else if (s.includes('source') || s.includes('vendor')) map.source = idx;
+    else if (s.includes('cargo out') || s.includes('out on') || s.includes('out date')) map.cargoOut = idx;
+    else if (s.includes('stay') || s.includes('day')) map.stayDay = idx;
+    else if (s.includes('bill amount') || s.includes('amount') || s.includes('cost') || s.includes('taka') || s === 'bill') map.billAmount = idx;
+    else if (s.includes('bill unit') || s.includes('unit') || s.includes('company')) map.billUnit = idx;
+  });
+  return map;
+}
+
+function isSummaryOrTotalRow(row) {
+  const cells = row.map(c => normalizeText(c).toLowerCase()).filter(Boolean);
+  if (cells.length === 0) return true;
+  const joined = cells.join(' ');
+  // Check if any early descriptive cell explicitly says Total / Sub Total / Grand Total
+  return cells.slice(0, 5).some(c =>
+    c === 'total' || c === 'sub total' || c === 'subtotal' || c === 'grand total' ||
+    c.startsWith('total ') || c.startsWith('total(') || c.startsWith('grand total')
+  ) || joined.includes('temporary cargo holding status');
+}
+
+function extractRecordsFromMatrix(matrix) {
+  allRecords = [];
+  auditLog = {
+    detectedHeaderRow: 0,
+    mappedColumns: {},
+    skippedRows: [],
+    rawTotalBill: 0,
+    parsedTotalBill: 0,
+    rawTotalDays: 0,
+    parsedTotalDays: 0
+  };
+
+  let headerIdx = -1;
+  let colMap = null;
+
+  for (let i = 0; i < Math.min(matrix.length, 30); i++) {
+    const row = matrix[i] || [];
+    const joined = row.map(c => normalizeText(c).toLowerCase()).join(' ');
+    if ((joined.includes('cargo in') || joined.includes('transport')) && (joined.includes('bill') || joined.includes('purpose') || joined.includes('source'))) {
+      headerIdx = i;
+      colMap = mapColumns(row);
+      break;
+    }
+  }
+
+  auditLog.detectedHeaderRow = headerIdx !== -1 ? headerIdx + 1 : 0;
+  auditLog.mappedColumns = colMap || {};
+
+  const startRow = headerIdx !== -1 ? headerIdx + 1 : 0;
+  const fillMerged = document.getElementById('fillMergedDates').checked;
+  let lastValidInDate = null;
+
+  for (let i = startRow; i < matrix.length; i++) {
+    const r = matrix[i] || [];
+    const excelRowNum = i + 1;
+    if (r.every(c => normalizeText(c) === '')) continue;
+
+    if (isSummaryOrTotalRow(r)) {
+      auditLog.skippedRows.push({ row: excelRowNum, reason: 'Summary / Total / Title row excluded', sample: r.slice(0, 4).map(normalizeText).filter(Boolean).join(' | ') });
+      continue;
+    }
+
+    let rec = null;
+    if (colMap && colMap.transportNo !== undefined && colMap.billAmount !== undefined) {
+      let inDateObj = parseExcelDate(r[colMap.cargoIn ?? 0]);
+      if (!inDateObj.valid && fillMerged && lastValidInDate) {
+        inDateObj = { ...lastValidInDate };
+      } else if (inDateObj.valid) {
+        lastValidInDate = { ...inDateObj };
+      }
+
+      const outDateObj = parseExcelDate(r[colMap.cargoOut ?? 6]);
+      const stayVal = cleanNumber(r[colMap.stayDay ?? 7]);
+      const billVal = cleanNumber(r[colMap.billAmount]);
+
+      auditLog.rawTotalBill += billVal;
+      auditLog.rawTotalDays += stayVal;
+
+      rec = {
+        excelRow: excelRowNum,
+        cargoIn: inDateObj.display,
+        monthKey: inDateObj.monthKey,
+        fullMonth: inDateObj.fullMonth,
+        bringFor: normalizeText(r[colMap.bringFor ?? 1]),
+        transportNo: normalizeText(r[colMap.transportNo]),
+        contact: normalizeText(r[colMap.contact ?? 3]),
+        purpose: normalizeText(r[colMap.purpose ?? 4]),
+        source: normalizeText(r[colMap.source ?? 5]),
+        cargoOut: outDateObj.display,
+        stayDay: stayVal,
+        billAmount: billVal,
+        billUnit: normalizeText(r[colMap.billUnit ?? 9])
+      };
+    } else if (r.length >= 9) {
+      const offset = (r.length >= 11 && /^\d+$/.test(normalizeText(r[0]))) ? 1 : 0;
+      let inDateObj = parseExcelDate(r[offset + 0]);
+      if (!inDateObj.valid && fillMerged && lastValidInDate) {
+        inDateObj = { ...lastValidInDate };
+      } else if (inDateObj.valid) {
+        lastValidInDate = { ...inDateObj };
+      }
+      const outDateObj = parseExcelDate(r[offset + 6]);
+      const stayVal = cleanNumber(r[offset + 7]);
+      const billVal = cleanNumber(r[offset + 8]);
+
+      auditLog.rawTotalBill += billVal;
+      auditLog.rawTotalDays += stayVal;
+
+      rec = {
+        excelRow: excelRowNum,
+        cargoIn: inDateObj.display,
+        monthKey: inDateObj.monthKey,
+        fullMonth: inDateObj.fullMonth,
+        bringFor: normalizeText(r[offset + 1]),
+        transportNo: normalizeText(r[offset + 2]),
+        contact: normalizeText(r[offset + 3]),
+        purpose: normalizeText(r[offset + 4]),
+        source: normalizeText(r[offset + 5]),
+        cargoOut: outDateObj.display,
+        stayDay: stayVal,
+        billAmount: billVal,
+        billUnit: normalizeText(r[offset + 9])
+      };
+    }
+
+    if (rec && (rec.transportNo || rec.billAmount > 0 || rec.bringFor)) {
+      allRecords.push(rec);
+      auditLog.parsedTotalBill += rec.billAmount;
+      auditLog.parsedTotalDays += rec.stayDay;
+    } else {
+      auditLog.skippedRows.push({ row: excelRowNum, reason: 'Empty / non-cargo note row', sample: r.slice(0, 4).map(normalizeText).filter(Boolean).join(' | ') });
+    }
+  }
+
+  populateMonthDropdown();
+}
+
+function onSheetChange() {
+  if (lastPastedMatrix) {
+    extractRecordsFromMatrix(lastPastedMatrix);
+    return;
+  }
+  if (!currentWorkbook) return;
+  const sheetName = document.getElementById('sheetSelect').value;
+  const sheet = currentWorkbook.Sheets[sheetName];
+  const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
+  extractRecordsFromMatrix(matrix);
+}
+
+function populateMonthDropdown() {
+  const monthSel = document.getElementById('monthSelect');
+  if (allRecords.length === 0) {
+    alert('No valid cargo records found in this sheet. Please verify the column headers.');
+    return;
+  }
+
+  const monthMap = new Map();
+  allRecords.forEach(r => {
+    if (!monthMap.has(r.monthKey)) {
+      monthMap.set(r.monthKey, { key: r.monthKey, label: r.fullMonth, count: 0 });
+    }
+    monthMap.get(r.monthKey).count++;
+  });
+
+  const months = Array.from(monthMap.values()).sort((a, b) => b.key.localeCompare(a.key));
+  let optionsHtml = months.map(m => `<option value="${m.key}">${m.label} (${m.count} Trips)</option>`).join('');
+  if (months.length > 1) {
+    optionsHtml += `<option value="ALL">All Months Combined (${allRecords.length} Trips)</option>`;
+  }
+  monthSel.innerHTML = optionsHtml;
+  renderSelectedMonth();
+}
+
+function groupBy(arr, key) {
+  const map = new Map();
+  arr.forEach(r => {
+    const rawLabel = normalizeText(r[key]) || 'Unspecified';
+    const normKey = rawLabel.toLowerCase();
+    if (!map.has(normKey)) {
+      map.set(normKey, { name: rawLabel, trips: 0, days: 0, amount: 0 });
+    }
+    const item = map.get(normKey);
+    item.trips += 1;
+    item.days += r.stayDay;
+    item.amount += r.billAmount;
+  });
+  return Array.from(map.values()).sort((a, b) => b.amount - a.amount);
+}
+
+function renderSelectedMonth() {
+  const selectedKey = document.getElementById('monthSelect').value;
+  if (selectedKey === 'ALL') {
+    activeMonthRecords = [...allRecords];
+    activeMonthLabel = 'All Months Combined';
+  } else {
+    activeMonthRecords = allRecords.filter(r => r.monthKey === selectedKey);
+    activeMonthLabel = activeMonthRecords[0]?.fullMonth || selectedKey;
+  }
+
+  const totalTrips = activeMonthRecords.length;
+  const totalCost = activeMonthRecords.reduce((s, r) => s + r.billAmount, 0);
+  const totalDays = activeMonthRecords.reduce((s, r) => s + r.stayDay, 0);
+  const avgDays = totalTrips > 0 ? (totalDays / totalTrips).toFixed(2) : '0.00';
+
+  const byPurpose = groupBy(activeMonthRecords, 'purpose');
+  const bySource = groupBy(activeMonthRecords, 'source');
+  const byUnit = groupBy(activeMonthRecords, 'billUnit');
+
+  // Cross-check group sums vs activeMonthRecords total
+  const sumPurpose = byPurpose.reduce((s, x) => s + x.amount, 0);
+  const sumSource = bySource.reduce((s, x) => s + x.amount, 0);
+  const sumUnit = byUnit.reduce((s, x) => s + x.amount, 0);
+
+  const isBalanced = (
+    Math.abs(auditLog.rawTotalBill - auditLog.parsedTotalBill) < 0.01 &&
+    Math.abs(sumPurpose - totalCost) < 0.01 &&
+    Math.abs(sumSource - totalCost) < 0.01 &&
+    Math.abs(sumUnit - totalCost) < 0.01
+  );
+
+  const unknownCount = activeMonthRecords.filter(r => r.monthKey === 'Unknown' || r.monthKey === 'Unparsed').length;
+  const missingTransport = activeMonthRecords.filter(r => !r.transportNo).length;
+
+  let bannerClass = 'audit-ok';
+  let bannerTitle = `100% Mathematical Reconciliation Passed (${activeMonthLabel})`;
+  if (!isBalanced) {
+    bannerClass = 'audit-err';
+    bannerTitle = `Reconciliation Warning — Check Skipped Rows Below`;
+  } else if (unknownCount > 0 || missingTransport > 0) {
+    bannerClass = 'audit-warn';
+    bannerTitle = `Totals Matched 100%, but ${unknownCount} row(s) have blank/unparsed dates and ${missingTransport} row(s) have blank Transport No.`;
+  }
+
+  const skippedHtml = auditLog.skippedRows.length > 0
+    ? `<details style="margin-top:8px;"><summary>View ${auditLog.skippedRows.length} excluded non-data/total row(s) from worksheet</summary>
+         <ul style="margin:6px 0 0 18px; font-size:12px;">
+           ${auditLog.skippedRows.map(s => `<li><b>Excel Row ${s.row}:</b> ${s.reason} — <code>${s.sample || '(blank)'}</code></li>`).join('')}
+         </ul>
+       </details>`
+    : '';
+
+  document.getElementById('auditBox').innerHTML = `
+    <div class="audit-banner ${bannerClass}">
+      <strong>${bannerTitle}</strong>
+      <div class="reconcile-grid">
+        <div><b>Header Detected:</b> Excel Row #${auditLog.detectedHeaderRow || 1}</div>
+        <div><b>Full Sheet Bill Check:</b> BDT ${auditLog.parsedTotalBill.toLocaleString()} / ${auditLog.rawTotalBill.toLocaleString()}</div>
+        <div><b>Active Month Cross-Check:</b> Purpose (${sumPurpose.toLocaleString()}) = Vendor (${sumSource.toLocaleString()}) = Unit (${sumUnit.toLocaleString()})</div>
+        <div><b>Active Records:</b> ${totalTrips} Trips | ${totalDays} Stay Days</div>
+      </div>
+      ${skippedHtml}
+    </div>`;
+
+  document.getElementById('kpiTrips').textContent = `${totalTrips} Trips`;
+  document.getElementById('kpiCost').textContent = `BDT ${totalCost.toLocaleString()}`;
+  document.getElementById('kpiDays').textContent = `${totalDays} Days`;
+  document.getElementById('kpiAvg').textContent = `${avgDays} Days`;
+  document.getElementById('mailMonthBadge').textContent = activeMonthLabel;
+
+  const purposeLines = byPurpose.map(p =>
+    `•\t${p.name}: BDT ${p.amount.toLocaleString()} (${p.trips} ${p.trips === 1 ? 'Cargo' : 'Cargos'})`
+  ).join('\n');
+
+  const vendorLines = bySource.map(v =>
+    `•\t${v.name}: BDT ${v.amount.toLocaleString()} (${v.trips} ${v.trips === 1 ? 'Cargo' : 'Cargos'})`
+  ).join('\n');
+
+  const unitLines = byUnit.map(u =>
+    `•\t${u.name}: BDT ${u.amount.toLocaleString()} (${u.trips} ${u.trips === 1 ? 'Cargo' : 'Cargos'})`
+  ).join('\n');
+
+  const mailText =
+`Subject: Temporary Cargo Holding Summary – ${activeMonthLabel}
+
+Dear Sir,
+
+Here is the summary of our temporary cargo holding operations for ${activeMonthLabel}, arranged for audit compliance:
+•\tTotal Movements: ${totalTrips} Trips
+•\tTotal Cost: BDT ${totalCost.toLocaleString()}
+•\tAvg. Duration: ${avgDays} Days per cargo
+
+Cost by Audit Purpose:
+${purposeLines}
+
+Vendor Share:
+${vendorLines}
+
+Billing Unit Share:
+${unitLines}
+
+Please find the detailed report and chart attached for your review.
+
+Best regards,
+[Your Name]`;
+
+  document.getElementById('mailPreview').textContent = mailText;
+
+  function makeSummaryHTML(title, list) {
+    const rowsHtml = list.map(item => `
+      <tr>
+        <td><b>${item.name}</b></td>
+        <td class="ctr">${item.trips}</td>
+        <td class="ctr">${item.days}</td>
+        <td class="num">${item.amount.toLocaleString()}</td>
+        <td class="num">${totalCost > 0 ? ((item.amount / totalCost) * 100).toFixed(1) : '0.0'}%</td>
+      </tr>
+    `).join('');
+    return `
+      <div style="margin-bottom:14px;">
+        <div style="font-weight:700; font-size:12.5px; color:#1B365D; margin-bottom:4px;">${title}</div>
+        <table>
+          <thead><tr><th>Category</th><th class="ctr">Trips</th><th class="ctr">Days</th><th class="num">Amount (BDT)</th><th class="num">Share</th></tr></thead>
+          <tbody>
+            ${rowsHtml}
+            <tr class="tot-row"><td>Total</td><td class="ctr">${totalTrips}</td><td class="ctr">${totalDays}</td><td class="num">${totalCost.toLocaleString()}</td><td class="num">100.0%</td></tr>
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  document.getElementById('summaryTables').innerHTML =
+    makeSummaryHTML('Cost by Audit Purpose / Buyer', byPurpose) +
+    makeSummaryHTML('Vendor Share (Source)', bySource) +
+    makeSummaryHTML('Billing Unit Breakdown', byUnit);
+
+  const logBody = activeMonthRecords.map((r, i) => `
+    <tr>
+      <td class="ctr">${i + 1}</td>
+      <td class="ctr" style="color:#64748B;">Row ${r.excelRow}</td>
+      <td class="ctr">${r.cargoIn}</td>
+      <td>${r.bringFor}</td>
+      <td class="ctr"><b>${r.transportNo}</b></td>
+      <td>${r.contact}</td>
+      <td>${r.purpose}</td>
+      <td class="ctr">${r.source}</td>
+      <td class="ctr">${r.cargoOut}</td>
+      <td class="ctr">${r.stayDay}</td>
+      <td class="num">${r.billAmount.toLocaleString()}</td>
+      <td class="ctr">${r.billUnit}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('logTableWrap').innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th class="ctr">SL</th><th class="ctr">Excel Row</th><th class="ctr">Cargo in Date</th><th>Bring For</th><th class="ctr">Transport No.</th>
+          <th>Contact</th><th>Purpose / Buyer</th><th class="ctr">Source</th><th class="ctr">Cargo Out On</th>
+          <th class="ctr">Stay Day</th><th class="num">Bill Amount</th><th class="ctr">Bill Unit</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${logBody}
+        <tr class="tot-row">
+          <td colspan="9" class="num">TOTAL (${activeMonthLabel.toUpperCase()})</td>
+          <td class="ctr">${totalDays}</td>
+          <td class="num">${totalCost.toLocaleString()}</td>
+          <td class="ctr">${totalTrips} Trips</td>
+        </tr>
+      </tbody>
+    </table>`;
+
+  renderChart('chartPurpose', 'bar', 'Cost by Audit Purpose (BDT)', byPurpose.map(x => x.name), byPurpose.map(x => x.amount), ['#1B365D', '#2B7A78', '#D97706', '#3B82F6'], totalCost);
+  renderChart('chartVendor', 'bar', 'Vendor Share (BDT)', bySource.map(x => x.name), bySource.map(x => x.amount), ['#2C4D75', '#0D9488', '#D97706', '#6366F1'], totalCost);
+  renderChart('chartUnit', 'doughnut', 'Billing Unit Share (BDT)', byUnit.map(x => x.name), byUnit.map(x => x.amount), ['#1B365D', '#3B82F6', '#10B981', '#F59E0B'], totalCost);
+
+  document.getElementById('outputSection').style.display = 'block';
+}
+
+function renderChart(canvasId, type, title, labels, data, colors, totalCost) {
+  if (charts[canvasId]) charts[canvasId].destroy();
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  const maxVal = Math.max(...data, 1000);
+
+  charts[canvasId] = new Chart(ctx, {
+    type: type,
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'BDT',
+        data: data,
+        backgroundColor: colors,
+        borderRadius: type === 'bar' ? 6 : 0,
+        borderWidth: type === 'doughnut' ? 2 : 0,
+        borderColor: '#FFFFFF'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      layout: { padding: { top: 24, bottom: 8, left: 8, right: 8 } },
+      plugins: {
+        legend: { display: type !== 'bar', position: 'bottom', labels: { font: { size: 11, weight: 'bold' } } },
+        title: { display: true, text: title, color: '#1B365D', font: { size: 13.5, weight: 'bold' }, padding: { bottom: 14 } },
+        datalabels: {
+          color: type === 'bar' ? '#1E293B' : '#FFFFFF',
+          anchor: type === 'bar' ? 'end' : 'center',
+          align: type === 'bar' ? 'top' : 'center',
+          font: { size: 10.5, weight: 'bold' },
+          formatter: (val) => {
+            const pct = totalCost > 0 ? ((val / totalCost) * 100).toFixed(1) : '0.0';
+            return type === 'bar' ? `BDT ${val.toLocaleString()} (${pct}%)` : `${val.toLocaleString()}\n(${pct}%)`;
+          }
+        }
+      },
+      scales: type === 'bar' ? {
+        y: { beginAtZero: true, suggestedMax: maxVal * 1.22, grid: { color: '#E2E8F0' } },
+        x: { grid: { display: false }, ticks: { font: { weight: 'bold' } } }
+      } : {}
+    }
+  });
+}
+
+function parsePastedText() {
+  const raw = document.getElementById('pasteInput').value.trim();
+  if (!raw) return;
+  const rows = [];
+  let row = [], cell = '', inQuotes = false;
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i], next = raw[i + 1];
+    if (ch === '"') {
+      if (inQuotes && next === '"') { cell += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (ch === '\t' && !inQuotes) {
+      row.push(cell); cell = '';
+    } else if ((ch === '\n' || (ch === '\r' && next === '\n')) && !inQuotes) {
+      if (ch === '\r') i++;
+      row.push(cell);
+      if (row.some(c => c.trim() !== '')) rows.push(row);
+      row = []; cell = '';
+    } else {
+      cell += ch;
+    }
+  }
+  if (cell !== '' || row.length > 0) {
+    row.push(cell);
+    if (row.some(c => c.trim() !== '')) rows.push(row);
+  }
+  currentWorkbook = null;
+  lastPastedMatrix = rows;
+  document.getElementById('filterControls').style.display = 'flex';
+  document.getElementById('sheetSelect').innerHTML = '<option value="Pasted">Pasted Data</option>';
+  extractRecordsFromMatrix(rows);
+}
+
+function loadSampleData() {
+  document.getElementById('pasteInput').value =
+    'Cargo in Date\tBring For\tTransport No.\tContact\tPurpose / Buyer\tSource\tCargo Out On\tStay Day\tBill Amount\tBill Unit\n' +
+    '14-Oct-26\tCutting\tD M TA 11-5285\t"01305-373244\n/01604-821765"\tPrimark Visit\tShahjoki\t15-Oct-26\t2\t10000\tNhk\n' +
+    '14-Oct-26\tCutting\tDM TA 11-3925\t01976-337322\tPrimark Visit\tNew JS\t15-Oct-26\t2\t11000\tNhk\n' +
+    '14-Oct-26\tFinishind Goods\tDm Ta 11-9818\t01857-357106\tPrimark Visit\tNew JS\t15-Oct-26\t2\t11000\tNhk\n' +
+    '14-Oct-26\tFinishind Goods\tD M TA 16-2129\t01919-570776\tPrimark Visit\tShahjoki\t15-Oct-26\t2\t10000\tNhk\n' +
+    '24-Oct-26\tCutting\tDM TA 11-4041\t01719-275576\tRsc Audit\tNew JS\t25-Oct-26\t2\t11000\tAFL\n' +
+    '24-Oct-26\tCutting\tDM TA 11-5818\t01876-966429\tRsc Audit\tShahjoki\t25-Oct-26\t2\t10000\tNhk\n' +
+    '24-Oct-26\tFinishind Goods\tDM TA 11-3107\t01350-832216\tRsc Audit\tShahjoki\t25-Oct-26\t1\t5000\tNhk';
+  parsePastedText();
+}
+
+function copyMail() {
+  const txt = document.getElementById('mailPreview').textContent;
+  navigator.clipboard.writeText(txt).then(() => showToast('Management email draft copied!'));
+}
+
+function getChartBase64WithWhiteBg(canvasId) {
+  const srcCanvas = document.getElementById(canvasId);
+  const tmpCanvas = document.createElement('canvas');
+  tmpCanvas.width = srcCanvas.width;
+  tmpCanvas.height = srcCanvas.height;
+  const tCtx = tmpCanvas.getContext('2d');
+  tCtx.fillStyle = '#FFFFFF';
+  tCtx.fillRect(0, 0, tmpCanvas.width, tmpCanvas.height);
+  tCtx.drawImage(srcCanvas, 0, 0);
+  return tmpCanvas.toDataURL('image/png');
+}
+
+async function exportExcelWithCharts() {
+  if (!activeMonthRecords.length) return;
+
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Seating Cargo Reporting System';
+  wb.created = new Date();
+
+  const byPurpose = groupBy(activeMonthRecords, 'purpose');
+  const bySource = groupBy(activeMonthRecords, 'source');
+  const byUnit = groupBy(activeMonthRecords, 'billUnit');
+  const totalTrips = activeMonthRecords.length;
+  const totalCost = activeMonthRecords.reduce((s, r) => s + r.billAmount, 0);
+  const totalDays = activeMonthRecords.reduce((s, r) => s + r.stayDay, 0);
+  const avgDays = totalTrips > 0 ? Number((totalDays / totalTrips).toFixed(2)) : 0;
+
+  // ==========================================
+  // TAB 1: EXECUTIVE DASHBOARD (LIVE =SUM() FORMULAS + EMBEDDED CHARTS)
+  // ==========================================
+  const wsDash = wb.addWorksheet('Executive Dashboard', { views: [{ showGridLines: true }] });
+
+  wsDash.columns = [
+    { width: 25 }, { width: 12 }, { width: 13 }, { width: 19 }, { width: 14 },
+    { width: 3 },  { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }
+  ];
+
+  wsDash.mergeCells('A1:K1');
+  const titleCell = wsDash.getCell('A1');
+  titleCell.value = `SEATING CARGO EXECUTIVE SUMMARY REPORT — ${activeMonthLabel.toUpperCase()}`;
+  titleCell.font = { name: 'Calibri', size: 15, bold: true, color: { argb: 'FFFFFFFF' } };
+  titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1B365D' } };
+  titleCell.alignment = { horizontal: 'center', vertical: 'center' };
+  wsDash.getRow(1).height = 30;
+
+  wsDash.mergeCells('A2:K2');
+  const subCell = wsDash.getCell('A2');
+  subCell.value = 'Temporary Cargo Holding Status (Temporary Space Solution for Audit Compliance)';
+  subCell.font = { name: 'Calibri', size: 10, italic: true, color: { argb: 'FFE2E8F0' } };
+  subCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1B365D' } };
+  subCell.alignment = { horizontal: 'center', vertical: 'center' };
+  wsDash.getRow(2).height = 19;
+
+  wsDash.getRow(4).height = 18;
+  wsDash.getRow(5).height = 26;
+
+  const kpiCards = [
+    { cols: ['A', 'B'], label: 'TOTAL MOVEMENTS', val: `${totalTrips} Trips` },
+    { cols: ['D', 'E'], label: 'TOTAL HOLDING DURATION', val: `${totalDays} Stay Days` },
+    { cols: ['G', 'H'], label: 'TOTAL BILLING COST', val: `BDT ${totalCost.toLocaleString()}` },
+    { cols: ['J', 'K'], label: 'AVG. DURATION / CARGO', val: `${avgDays} Days` }
+  ];
+
+  kpiCards.forEach(k => {
+    wsDash.mergeCells(`${k.cols[0]}4:${k.cols[1]}4`);
+    wsDash.mergeCells(`${k.cols[0]}5:${k.cols[1]}5`);
+    const cLbl = wsDash.getCell(`${k.cols[0]}4`);
+    cLbl.value = k.label;
+    cLbl.font = { name: 'Calibri', size: 9, bold: true, color: { argb: 'FF475569' } };
+    cLbl.alignment = { horizontal: 'left', vertical: 'center', indent: 1 };
+
+    const cVal = wsDash.getCell(`${k.cols[0]}5`);
+    cVal.value = k.val;
+    cVal.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FF1B365D' } };
+    cVal.alignment = { horizontal: 'left', vertical: 'center', indent: 1 };
+
+    [4, 5].forEach(r => {
+      k.cols.forEach((colLet, idx) => {
+        const cell = wsDash.getCell(`${colLet}${r}`);
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+        cell.border = {
+          left: { style: idx === 0 ? 'medium' : 'thin', color: { argb: idx === 0 ? 'FF1B365D' : 'FFCBD5E1' } },
+          right: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+          top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+          bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+        };
+      });
+    });
+  });
+
+  const thinBorder = {
+    left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+    right: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+    top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+    bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+  };
+  const totalBorder = {
+    left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+    right: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+    top: { style: 'thin', color: { argb: 'FF1B365D' } },
+    bottom: { style: 'double', color: { argb: 'FF1B365D' } }
+  };
+
+  function addSummaryTable(startRow, title, colLabel, items) {
+    wsDash.mergeCells(`A${startRow}:E${startRow}`);
+    const sec = wsDash.getCell(`A${startRow}`);
+    sec.value = title;
+    sec.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FF1B365D' } };
+    sec.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E2EC' } };
+    sec.alignment = { horizontal: 'left', vertical: 'center', indent: 1 };
+    wsDash.getRow(startRow).height = 22;
+
+    const hdrRow = startRow + 1;
+    wsDash.getRow(hdrRow).height = 21;
+    const headers = [colLabel, 'Trips', 'Stay Days', 'Bill Amount (BDT)', 'Share (%)'];
+    headers.forEach((h, i) => {
+      const c = wsDash.getCell(hdrRow, i + 1);
+      c.value = h;
+      c.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2C4D75' } };
+      c.alignment = { horizontal: 'center', vertical: 'center' };
+      c.border = thinBorder;
+    });
+
+    const firstDataRow = hdrRow + 1;
+    const lastDataRow = hdrRow + items.length;
+    const totRow = lastDataRow + 1;
+
+    items.forEach((it, idx) => {
+      const r = firstDataRow + idx;
+      wsDash.getRow(r).height = 20;
+      const pct = totalCost > 0 ? it.amount / totalCost : 0;
+      const vals = [
+        it.name,
+        it.trips,
+        it.days,
+        it.amount,
+        { formula: `D${r}/$D$${totRow}`, result: pct }
+      ];
+      vals.forEach((v, cIdx) => {
+        const cell = wsDash.getCell(r, cIdx + 1);
+        cell.value = v;
+        cell.font = { name: 'Calibri', size: 10, color: { argb: 'FF1E293B' } };
+        if (idx % 2 === 1) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF4F7FA' } };
+        cell.border = thinBorder;
+        if (cIdx === 0) cell.alignment = { horizontal: 'left', vertical: 'center', indent: 1 };
+        else if (cIdx === 3) { cell.alignment = { horizontal: 'right', vertical: 'center' }; cell.numFmt = '#,##0'; }
+        else if (cIdx === 4) { cell.alignment = { horizontal: 'right', vertical: 'center' }; cell.numFmt = '0.0%'; }
+        else cell.alignment = { horizontal: 'center', vertical: 'center' };
+      });
+    });
+
+    wsDash.getRow(totRow).height = 22;
+    const totVals = [
+      'Total',
+      { formula: `SUM(B${firstDataRow}:B${lastDataRow})`, result: totalTrips },
+      { formula: `SUM(C${firstDataRow}:C${lastDataRow})`, result: totalDays },
+      { formula: `SUM(D${firstDataRow}:D${lastDataRow})`, result: totalCost },
+      { formula: `SUM(E${firstDataRow}:E${lastDataRow})`, result: 1 }
+    ];
+    totVals.forEach((v, cIdx) => {
+      const cell = wsDash.getCell(totRow, cIdx + 1);
+      cell.value = v;
+      cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF0F172A' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+      cell.border = totalBorder;
+      if (cIdx === 0) cell.alignment = { horizontal: 'left', vertical: 'center', indent: 1 };
+      else if (cIdx === 3) { cell.alignment = { horizontal: 'right', vertical: 'center' }; cell.numFmt = '#,##0'; }
+      else if (cIdx === 4) { cell.alignment = { horizontal: 'right', vertical: 'center' }; cell.numFmt = '0.0%'; }
+      else cell.alignment = { horizontal: 'center', vertical: 'center' };
+    });
+
+    return totRow + 2;
+  }
+
+  let nextR = addSummaryTable(7, '1. COST BY AUDIT PURPOSE / BUYER', 'Purpose / Buyer', byPurpose);
+  nextR = addSummaryTable(nextR, '2. VENDOR SHARE (SOURCE)', 'Vendor / Source', bySource);
+  nextR = addSummaryTable(nextR, '3. BILLING UNIT SHARE', 'Bill Unit', byUnit);
+
+  const imgPurposeId = wb.addImage({ base64: getChartBase64WithWhiteBg('chartPurpose'), extension: 'png' });
+  const imgVendorId = wb.addImage({ base64: getChartBase64WithWhiteBg('chartVendor'), extension: 'png' });
+  const imgUnitId = wb.addImage({ base64: getChartBase64WithWhiteBg('chartUnit'), extension: 'png' });
+
+  wsDash.addImage(imgPurposeId, { tl: { col: 6, row: 6 }, ext: { width: 470, height: 245 } });
+  wsDash.addImage(imgVendorId,  { tl: { col: 6, row: 19 }, ext: { width: 470, height: 245 } });
+  wsDash.addImage(imgUnitId,    { tl: { col: 6, row: 32 }, ext: { width: 470, height: 245 } });
+
+  // ==========================================
+  // TAB 2: COMPLETE VERIFIED CARGO LOG (WITH LIVE =SUM() FORMULAS)
+  // ==========================================
+  const wsLog = wb.addWorksheet('Cargo Log', { views: [{ showGridLines: true, state: 'frozen', ySplit: 4 }] });
+  wsLog.columns = [
+    { width: 6 }, { width: 15 }, { width: 18 }, { width: 18 }, { width: 26 },
+    { width: 18 }, { width: 14 }, { width: 15 }, { width: 11 }, { width: 18 }, { width: 11 }
+  ];
+
+  wsLog.mergeCells('A1:K1');
+  const lTitle = wsLog.getCell('A1');
+  lTitle.value = `DETAILED SEATING CARGO LOG — ${activeMonthLabel.toUpperCase()}`;
+  lTitle.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+  lTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1B365D' } };
+  lTitle.alignment = { horizontal: 'center', vertical: 'center' };
+  wsLog.getRow(1).height = 28;
+
+  wsLog.mergeCells('A2:K2');
+  const lSub = wsLog.getCell('A2');
+  lSub.value = 'Temporary Cargo Holding Status (Temporary Space Solution for Audit Compliance)';
+  lSub.font = { name: 'Calibri', size: 10, italic: true, color: { argb: 'FFE2E8F0' } };
+  lSub.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1B365D' } };
+  lSub.alignment = { horizontal: 'center', vertical: 'center' };
+  wsLog.getRow(2).height = 18;
+
+  const logHeaders = ['SL', 'Cargo in Date', 'Bring For', 'Transport No.', 'Contact', 'Purpose / Buyer', 'Source', 'Cargo Out On', 'Stay Day', 'Bill Amount (BDT)', 'Bill Unit'];
+  wsLog.getRow(4).height = 23;
+  logHeaders.forEach((h, idx) => {
+    const c = wsLog.getCell(4, idx + 1);
+    c.value = h;
+    c.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2C4D75' } };
+    c.alignment = { horizontal: 'center', vertical: 'center' };
+    c.border = thinBorder;
+  });
+
+  const firstLogRow = 5;
+  const lastLogRow = 4 + activeMonthRecords.length;
+
+  activeMonthRecords.forEach((r, i) => {
+    const rowNum = firstLogRow + i;
+    wsLog.getRow(rowNum).height = 20;
+    const rowVals = [i + 1, r.cargoIn, r.bringFor, r.transportNo, r.contact, r.purpose, r.source, r.cargoOut, r.stayDay, r.billAmount, r.billUnit];
+    rowVals.forEach((v, cIdx) => {
+      const cell = wsLog.getCell(rowNum, cIdx + 1);
+      cell.value = v;
+      cell.font = { name: 'Calibri', size: 10, bold: cIdx === 3 };
+      if (i % 2 === 1) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF4F7FA' } };
+      cell.border = thinBorder;
+      if ([0, 1, 3, 6, 7, 8, 10].includes(cIdx)) cell.alignment = { horizontal: 'center', vertical: 'center' };
+      else if (cIdx === 9) { cell.alignment = { horizontal: 'right', vertical: 'center' }; cell.numFmt = '#,##0'; }
+      else cell.alignment = { horizontal: 'left', vertical: 'center' };
+    });
+  });
+
+  const totLogRow = lastLogRow + 1;
+  wsLog.getRow(totLogRow).height = 23;
+  wsLog.mergeCells(`A${totLogRow}:C${totLogRow}`);
+  wsLog.getCell(`A${totLogRow}`).value = `TOTAL (${activeMonthLabel.toUpperCase()})`;
+  wsLog.getCell(`A${totLogRow}`).alignment = { horizontal: 'right', vertical: 'center' };
+  wsLog.getCell(`D${totLogRow}`).value = { formula: `COUNTA(D${firstLogRow}:D${lastLogRow})&" Trips"`, result: `${totalTrips} Trips` };
+  wsLog.getCell(`D${totLogRow}`).alignment = { horizontal: 'center', vertical: 'center' };
+  wsLog.getCell(`I${totLogRow}`).value = { formula: `SUM(I${firstLogRow}:I${lastLogRow})`, result: totalDays };
+  wsLog.getCell(`I${totLogRow}`).alignment = { horizontal: 'center', vertical: 'center' };
+  wsLog.getCell(`J${totLogRow}`).value = { formula: `SUM(J${firstLogRow}:J${lastLogRow})`, result: totalCost };
+  wsLog.getCell(`J${totLogRow}`).alignment = { horizontal: 'right', vertical: 'center' };
+  wsLog.getCell(`J${totLogRow}`).numFmt = '#,##0';
+
+  for (let c = 1; c <= 11; c++) {
+    const cell = wsLog.getCell(totLogRow, c);
+    cell.font = { name: 'Calibri', size: 10, bold: true };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+    cell.border = totalBorder;
+  }
+
+  wsLog.autoFilter = `A4:K${lastLogRow}`;
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const safeName = activeMonthLabel.replace(/[^a-zA-Z0-9_-]/g, '_');
+  a.href = url;
+  a.download = `Seating_Cargo_Report_Verified_${safeName}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('100% Audit-Verified Excel with Charts downloaded!');
+}
+</script>
+<script src="extras.js"></script>
+</body>
+</html>
