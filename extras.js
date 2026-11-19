@@ -115,6 +115,7 @@ function png(){const{R,tot,days,g}=sums();if(!R.length)return;
 const orig=window.renderSelectedMonth;
 window.renderSelectedMonth=function(){orig.apply(this,arguments);try{build()}catch(e){console.error('extras',e)}};
 window.XT={checks,pd,wa};
+[['icon','icons/favicon-32.png','image/png'],['shortcut icon','favicon.ico','image/x-icon']].forEach(([r,h,t])=>{const k=document.createElement('link');k.rel=r;k.href=h;k.type=t;document.head.append(k)});
 const l=document.createElement('link');l.rel='apple-touch-icon';l.href='icons/logo-192.png';document.head.append(l);
 const t=document.createElement('meta');t.name='theme-color';t.content='#1B365D';document.head.append(t);
 if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('./sw.js').catch(()=>{});

@@ -39,3 +39,9 @@ After editing any file, bump `VERSION` in `sw.js` (e.g. `cargo-v2`) so phones pi
 - Header detection, merged-date fill-down, total-row skipping, reconciliation and the Excel `=SUM()` export are v4's own logic (unchanged); the add-on reads the same records — the checks only *report*, they never change your data.
 
 MIT License
+
+## Icon not showing?
+- **Folder not uploaded:** GitHub's web uploader often skips folders. Check the repo has `icons/logo-192.png`, `icons/logo-512.png`, `icons/logo-512-maskable.png`, `icons/favicon-32.png` and `favicon.ico` (use *Add file → Upload files* and drag the `icons` folder itself).
+- **Test the links:** open `https://<username>.github.io/seating-cargo-report/icons/logo-192.png` in Chrome. If it says 404, the file is missing or in the wrong place.
+- **Old icon stays after changing files:** Android caches the installed icon. Uninstall the app (long-press → Uninstall, or `chrome://webapks`), clear the site data, then install again. A browser tab icon needs a hard refresh.
+- **Using your own logo:** keep the same file names and sizes (192×192, 512×512, 512×512 maskable) and bump `VERSION` in `sw.js`.
